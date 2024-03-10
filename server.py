@@ -16,11 +16,14 @@ class Server(BaseHTTPRequestHandler):
       input_string = body["code"] + "\n" + body["input"]
       proc = subprocess.run(["python3", "run.py"], capture_output=True, text=True, input=input_string)
       self.send_response(200)
+      self.send_header("Content-Type", "application/json")
 
       if proc.returncode != 0:
         self.send_header("X-SEL-Status", "ERR")
         self.end_headers()
-        self.wfile.write(proc.stderr.encode())
+
+        response = json.dumps({ "eval": True, "sel_error": proc.stderr })
+        self.wfile.write(response.encode())
         return
       
       self.send_header("X-SEL-Status", "OK")
@@ -29,7 +32,14 @@ class Server(BaseHTTPRequestHandler):
       returned = proc.stdout.splitlines()[-1]
       output = proc.stdout[:proc.stdout.rfind("\n")]
 
-      response = json.dumps({ "returned": returned, "output": output })
+      response = json.dumps({ "eval": True, "sel_returned": returned, "sel_output": output })
+      self.wfile.write(response.encode())
+    else:
+      self.send_response(404)
+      self.send_header("Content-Type", "application/json")
+      self.end_headers()
+
+      response = json.dumps({ "eval": False, "error": "Page not found" })
       self.wfile.write(response.encode())
 
 def main():
