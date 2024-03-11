@@ -19,6 +19,15 @@ class Server(BaseHTTPRequestHandler):
       self.send_header("Content-Type", "application/json")
 
       if proc.returncode != 0:
+        # not enough input
+        if "EOFError" in proc.stderr:
+          self.send_header("X-SEL-Status", "EINPUT")
+          self.end_headers()
+
+          response = json.dumps({ "eval": True, "message": "Input required", "sel_error": proc.stderr })
+          self.wfile.write(response.encode())
+          return
+        
         self.send_header("X-SEL-Status", "ERR")
         self.end_headers()
 
